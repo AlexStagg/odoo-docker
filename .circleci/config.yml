@@ -32,6 +32,10 @@ workflows:
           password: GITHUB_TOKEN
           matrix:
             parameters:
-              version: ["13.0", "14.0", "15.0"]
+              version:
+              - "12.0"
+              - "13.0"
+              - "14.0"
+              - "15.0"
           context:
             - github
