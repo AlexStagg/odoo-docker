@@ -1,0 +1,37 @@
+version: 2.1
+jobs:
+  build-and-publish:
+    docker:
+      - image: cimg/base:current
+    parameters:
+      version:
+        description: What version of odoo to build
+        type: string
+      repo:
+        description: docker repo
+        type: string
+        default: ghcr.io/alexstagg/odoo-docker
+      username:
+        description: Username for docker registry
+        type: env_var_name
+      password:
+        description: Password for docker registry
+        type: env_var_name
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run: |
+          docker build -t << parameters.repo >>:<< parameters.version >> << parameters.version >>
+          echo ${<< parameters.password >>} | docker login ghcr.io --username ${<< parameters.username >>} --password-stdin
+          docker push << parameters.repo >>:<< parameters.version >>
+workflows:
+  build_and_publish:
+    jobs:
+      - build-and-publish:
+          username: GITHUB_USERNAME
+          password: GITHUB_TOKEN
+          matrix:
+            parameters:
+              version: ["13.0", "14.0", "15.0"]
+          context:
+            - github
