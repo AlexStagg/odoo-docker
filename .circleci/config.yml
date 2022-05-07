@@ -24,6 +24,33 @@ jobs:
           docker build -t << parameters.repo >>:<< parameters.version >> << parameters.version >>
           echo ${<< parameters.password >>} | docker login ghcr.io --username ${<< parameters.username >>} --password-stdin
           docker push << parameters.repo >>:<< parameters.version >>
+  build-and-publish-enterprise:
+    docker:
+      - image: cimg/base:current
+    parameters:
+      version:
+        description: What version of odoo to build
+        type: string
+      repo:
+        description: docker repo
+        type: string
+        default: ghcr.io/alexstagg/odoo-docker
+      username:
+        description: Username for docker registry
+        type: env_var_name
+      password:
+        description: Password for docker registry
+        type: env_var_name
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run: |
+          echo ${<< parameters.password >>} | docker login ghcr.io --username ${<< parameters.username >>} --password-stdin
+          docker pull << parameters.repo >>:<< parameters.version >>
+          curl -sL --user "${<< parameters.username >>}:${<< parameters.password >>}" https://github.com/Smart-IT-Kirkham/enterprise/archive/refs/heads/<< parameters.version >>.tar.gz > modules.tar.gz
+          tar -xzf modules.tar.gz -C << parameters.version >>-enterprise/modules/
+          docker build -t << parameters.repo >>:<< parameters.version >>-enterprise << parameters.version >>-enterprise
+          docker push << parameters.repo >>:<< parameters.version >>-enterprise
 workflows:
   build_and_publish:
     jobs:
@@ -40,3 +67,14 @@ workflows:
               - "15.0"
           context:
             - github
+      - build-and-publish-enterprise:
+          username: GITHUB_USERNAME
+          password: GITHUB_TOKEN
+          matrix:
+            parameters:
+              version:
+              - "15.0"
+          context:
+            - github
+          requires:
+            - build-and-publish-<< matrix.version >>
